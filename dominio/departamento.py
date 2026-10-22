@@ -12,6 +12,16 @@ class Departamento:
         self._empleados = []                        # cardinalidad 1..* -> lista
 
     @property
+    def id_departamento(self) -> str:
+        """Devuelve el código del departamento."""
+        return self.__id_departamento
+
+    @property
+    def gerente_asignado(self) -> str:
+        """Devuelve el nombre del gerente asignado."""
+        return self._gerente_asignado
+
+    @property
     def nombre(self) -> str:
         """Devuelve el nombre del departamento."""
         return self.__nombre

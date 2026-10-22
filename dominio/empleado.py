@@ -27,6 +27,16 @@ class Empleado(Persona):
         """Devuelve el departamento del empleado, o None si no tiene."""
         return self._departamento
 
+    @property
+    def fecha_contrato(self) -> date:
+        """Devuelve la fecha de contrato del empleado."""
+        return self.__fecha_contrato
+
+    @property
+    def salario(self) -> float:
+        """Devuelve el salario del empleado."""
+        return self.__salario
+
     def set_salario(self, valor: float) -> None:
         """Cambia el salario; debe ser mayor a 0."""
         if valor <= 0:
