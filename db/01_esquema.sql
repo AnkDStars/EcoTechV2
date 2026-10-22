@@ -6,8 +6,9 @@ CREATE TABLE IF NOT EXISTS persona (
     email     TEXT
 );
 
+
 CREATE TABLE IF NOT EXISTS departamento (
-    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    id               TEXT PRIMARY KEY,
     nombre           TEXT NOT NULL,
     gerente_asignado TEXT
 );
@@ -16,7 +17,7 @@ CREATE TABLE IF NOT EXISTS empleado (
     rut             TEXT PRIMARY KEY,
     fecha_ingreso   DATE NOT NULL,
     sueldo_base     INTEGER NOT NULL,
-    departamento_id INTEGER,
+    departamento_id TEXT,
     FOREIGN KEY (rut) REFERENCES persona(rut),
     FOREIGN KEY (departamento_id) REFERENCES departamento(id)
 );
