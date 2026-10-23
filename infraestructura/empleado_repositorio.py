@@ -61,3 +61,31 @@ class EmpleadoRepositorio:
         with obtener_conexion() as conn:
             filas = conn.execute(sql, params).fetchall()
         return [self._fila_a_empleado(f) for f in filas]
+
+    def actualizar(self, empleado):
+        """Actualiza los datos del empleado; devuelve cuántas filas cambiaron."""
+        departamento = empleado.departamento
+        departamento_id = departamento.id_departamento if departamento else None
+        with obtener_conexion() as conn:
+            conn.execute(
+                """UPDATE persona
+                   SET nombre = ?, direccion = ?, telefono = ?, email = ?
+                   WHERE rut = ?""",
+                (empleado.nombre, empleado.direccion, empleado.telefono,
+                 empleado.email, empleado.id_empleado),
+            )
+            cur = conn.execute(
+                """UPDATE empleado
+                   SET fecha_ingreso = ?, sueldo_base = ?, departamento_id = ?
+                   WHERE rut = ?""",
+                (empleado.fecha_contrato.isoformat(), empleado.salario,
+                 departamento_id, empleado.id_empleado),
+            )
+        return cur.rowcount
+
+    def eliminar(self, rut):
+        """Borra al empleado (y en cascada sus registros) y su fila en persona."""
+        with obtener_conexion() as conn:
+            cur = conn.execute("DELETE FROM empleado WHERE rut = ?", (rut,))
+            conn.execute("DELETE FROM persona WHERE rut = ?", (rut,))
+        return cur.rowcount > 0
