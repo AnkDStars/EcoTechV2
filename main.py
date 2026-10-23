@@ -3,20 +3,27 @@ from types import SimpleNamespace
 
 from dominio.departamento import Departamento
 from dominio.empleado import Empleado
+from infraestructura.conexion import ErrorDeConexion
+from infraestructura.departamento_repositorio import DepartamentoRepositorio
+from infraestructura.empleado_repositorio import EmpleadoRepositorio
 
-def main():
-    # Un objeto de cada clase
+PAYLOAD_INYECCION = "' OR '1'='1"
+RUT_DEMO = "12345678-9"
+ID_DEPARTAMENTO_DEMO = "D10"
+
+
+def demo_dominio():
+    """Usa las clases del dominio en memoria, sin base de datos (C05)."""
     dep = Departamento("D01", "Operaciones", "Carlos Pérez")
     ana = Empleado("E01", "Ana Rojas", "Av. Siempre Viva 123",
                    "+56912345678", "ana@ecotech.cl",
                    date(2024, 3, 1), 950_000)
     proyecto = SimpleNamespace(nombre="Planta Solar")  # stand-in de Proyecto
 
-    dep.asignar_empleado(ana)                             
-    ana.registrar_horas(proyecto, 6, "Instalación de paneles")  
+    dep.asignar_empleado(ana)
+    ana.registrar_horas(proyecto, 6, "Instalación de paneles")
     ana.registrar_horas(proyecto, 4, "Pruebas de conexión")
 
-    # Estado de cada uno
     print(dep)
     print(ana)
     for registro in ana.listar_registros():
@@ -24,5 +31,72 @@ def main():
     print(f"Horas registradas: {ana.total_horas()}")
 
 
+def demo_crud():
+    """Corre las cuatro operaciones sobre empleados y departamentos (C08)."""
+    empleados = EmpleadoRepositorio()
+    departamentos = DepartamentoRepositorio()
+
+    # Deja la base sin los datos de la demo para poder repetirla.
+    empleados.eliminar(RUT_DEMO)
+    departamentos.eliminar(ID_DEPARTAMENTO_DEMO)
+
+    dep = Departamento(ID_DEPARTAMENTO_DEMO, "Demostración", "Carlos Pérez")
+    ana = Empleado(RUT_DEMO, "Ana Rojas", "Av. Costanera 123", "+56912345678",
+                   "ana@ecotech.cl", date(2024, 3, 1), 950_000)
+    dep.asignar_empleado(ana)
+
+    departamentos.guardar(dep)                                    # crear
+    empleados.guardar(ana)
+    print(empleados.obtener(RUT_DEMO))                            # leer uno
+    print(f"Empleados en la base: {len(empleados.listar())}")     # leer varios
+
+    ana.set_salario(1_050_000)
+    print(f"Filas actualizadas: {empleados.actualizar(ana)}")     # actualizar
+    print(f"Sueldo guardado: {empleados.obtener(RUT_DEMO).salario}")
+
+    try:                                                          # borrado impedido
+        departamentos.eliminar(ID_DEPARTAMENTO_DEMO)
+    except ErrorDeConexion as error:
+        print(f"Aviso (esperado): {error}")
+
+    print(f"Empleado eliminado: {empleados.eliminar(RUT_DEMO)}")  # eliminar
+    print(f"Departamento eliminado: {departamentos.eliminar(ID_DEPARTAMENTO_DEMO)}")
+
+
+def prueba_inyeccion():
+    """Verifica que el payload ' OR '1'='1 se trata como dato y no como código."""
+    empleados = EmpleadoRepositorio()
+    departamentos = DepartamentoRepositorio()
+    total_antes = len(empleados.listar())
+
+    resultados = {
+        "empleados.listar": empleados.listar(nombre_contiene=PAYLOAD_INYECCION),
+        "empleados.obtener": empleados.obtener(PAYLOAD_INYECCION),
+        "empleados.eliminar": empleados.eliminar(PAYLOAD_INYECCION),
+        "departamentos.listar": departamentos.listar(nombre_contiene=PAYLOAD_INYECCION),
+        "departamentos.obtener": departamentos.obtener(PAYLOAD_INYECCION),
+        "departamentos.eliminar": departamentos.eliminar(PAYLOAD_INYECCION),
+    }
+    for nombre, resultado in resultados.items():
+        veredicto = "OK" if not resultado else "FALLO: concatena"
+        print(f"{nombre}: {resultado} -> {veredicto}")
+
+    intactos = len(empleados.listar()) == total_antes
+    print(f"Empleados intactos tras eliminar con el payload: {intactos}")
+
+
+def main():
+    """Ejecuta el ciclo completo de principio a fin como un cliente real."""
+    print("== Dominio en memoria ==")
+    demo_dominio()
+    print("\n== CRUD con la base ==")
+    demo_crud()
+    print("\n== Prueba de inyección SQL ==")
+    prueba_inyeccion()
+
+
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except ErrorDeConexion as error:
+        print(f"Error de base de datos: {error}")
