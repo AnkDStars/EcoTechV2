@@ -1,5 +1,6 @@
 from datetime import date
 
+from dominio.departamento import Departamento
 from dominio.empleado import Empleado
 from infraestructura.conexion import obtener_conexion
 
@@ -9,13 +10,16 @@ class EmpleadoRepositorio:
 
     # Texto fijo de la consulta: nunca lleva datos del usuario (esos van con ?).
     _SELECT = """SELECT p.rut, p.nombre, p.direccion, p.telefono, p.email,
-                        e.fecha_ingreso, e.sueldo_base
-                 FROM empleado e JOIN persona p ON p.rut = e.rut"""
+                        e.fecha_ingreso, e.sueldo_base,
+                        d.id, d.nombre, d.gerente_asignado
+                 FROM empleado e
+                 JOIN persona p ON p.rut = e.rut
+                 LEFT JOIN departamento d ON d.id = e.departamento_id"""
 
     @staticmethod
     def _fila_a_empleado(fila):
-        """Convierte una fila de la base en un objeto Empleado del dominio."""
-        return Empleado(
+        """Convierte una fila de la base en un Empleado (con su departamento, si tiene)."""
+        empleado = Empleado(
             id_empleado=fila[0],
             nombre=fila[1],
             direccion=fila[2],
@@ -24,6 +28,9 @@ class EmpleadoRepositorio:
             fecha_contrato=date.fromisoformat(fila[5]),
             salario=fila[6],
         )
+        if fila[7] is not None:   # cardinalidad 0..1: solo si tiene departamento
+            empleado.asignar_departamento(Departamento(fila[7], fila[8], fila[9]))
+        return empleado
 
     def guardar(self, empleado):
         """Inserta al empleado en persona y empleado, dentro de una sola transacción."""
