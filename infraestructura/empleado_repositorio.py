@@ -4,17 +4,40 @@ from dominio.departamento import Departamento
 from dominio.empleado import Empleado
 from infraestructura.conexion import obtener_conexion
 
+# Consultas completas: cada una es una sola constante de texto fijo.
+# Los datos del usuario viajan siempre aparte, como parámetros (?).
+_SQL_OBTENER = """
+    SELECT p.rut, p.nombre, p.direccion, p.telefono, p.email,
+           e.fecha_ingreso, e.sueldo_base,
+           d.id, d.nombre, d.gerente_asignado
+    FROM empleado e
+    JOIN persona p ON p.rut = e.rut
+    LEFT JOIN departamento d ON d.id = e.departamento_id
+    WHERE e.rut = ?
+"""
+
+_SQL_LISTAR = """
+    SELECT p.rut, p.nombre, p.direccion, p.telefono, p.email,
+           e.fecha_ingreso, e.sueldo_base,
+           d.id, d.nombre, d.gerente_asignado
+    FROM empleado e
+    JOIN persona p ON p.rut = e.rut
+    LEFT JOIN departamento d ON d.id = e.departamento_id
+"""
+
+_SQL_LISTAR_FILTRO = """
+    SELECT p.rut, p.nombre, p.direccion, p.telefono, p.email,
+           e.fecha_ingreso, e.sueldo_base,
+           d.id, d.nombre, d.gerente_asignado
+    FROM empleado e
+    JOIN persona p ON p.rut = e.rut
+    LEFT JOIN departamento d ON d.id = e.departamento_id
+    WHERE p.nombre LIKE '%' || ? || '%'
+"""
+
 
 class EmpleadoRepositorio:
     """Guarda y recupera empleados; traduce entre objetos del dominio y filas."""
-
-    # Texto fijo de la consulta: nunca lleva datos del usuario (esos van con ?).
-    _SELECT = """SELECT p.rut, p.nombre, p.direccion, p.telefono, p.email,
-                        e.fecha_ingreso, e.sueldo_base,
-                        d.id, d.nombre, d.gerente_asignado
-                 FROM empleado e
-                 JOIN persona p ON p.rut = e.rut
-                 LEFT JOIN departamento d ON d.id = e.departamento_id"""
 
     @staticmethod
     def _fila_a_empleado(fila):
@@ -53,20 +76,17 @@ class EmpleadoRepositorio:
 
     def obtener(self, rut):
         """Devuelve el empleado con ese rut, o None si no existe."""
-        sql = self._SELECT + " WHERE e.rut = ?"
         with obtener_conexion() as conn:
-            fila = conn.execute(sql, (rut,)).fetchone()
+            fila = conn.execute(_SQL_OBTENER, (rut,)).fetchone()
         return self._fila_a_empleado(fila) if fila else None
 
     def listar(self, nombre_contiene=None):
         """Devuelve una lista de empleados; si hay filtro, solo los que lo contienen."""
-        sql = self._SELECT
-        params = []
-        if nombre_contiene:
-            sql += " WHERE p.nombre LIKE ?"
-            params.append(f"%{nombre_contiene}%")
         with obtener_conexion() as conn:
-            filas = conn.execute(sql, params).fetchall()
+            if nombre_contiene:
+                filas = conn.execute(_SQL_LISTAR_FILTRO, (nombre_contiene,)).fetchall()
+            else:
+                filas = conn.execute(_SQL_LISTAR).fetchall()
         return [self._fila_a_empleado(f) for f in filas]
 
     def actualizar(self, empleado):

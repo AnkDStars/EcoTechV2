@@ -1,12 +1,28 @@
 from dominio.departamento import Departamento
 from infraestructura.conexion import obtener_conexion
 
+# Consultas completas: cada una es una sola constante de texto fijo.
+# Los datos del usuario viajan siempre aparte, como parámetros (?).
+_SQL_OBTENER = """
+    SELECT id, nombre, gerente_asignado
+    FROM departamento
+    WHERE id = ?
+"""
+
+_SQL_LISTAR = """
+    SELECT id, nombre, gerente_asignado
+    FROM departamento
+"""
+
+_SQL_LISTAR_FILTRO = """
+    SELECT id, nombre, gerente_asignado
+    FROM departamento
+    WHERE nombre LIKE '%' || ? || '%'
+"""
+
 
 class DepartamentoRepositorio:
     """Guarda y recupera departamentos; traduce entre objetos y filas."""
-
-    # Texto fijo de la consulta: nunca lleva datos del usuario (esos van con ?).
-    _SELECT = "SELECT id, nombre, gerente_asignado FROM departamento"
 
     @staticmethod
     def _fila_a_departamento(fila):
@@ -29,20 +45,17 @@ class DepartamentoRepositorio:
 
     def obtener(self, id_departamento):
         """Devuelve el departamento con ese id, o None si no existe."""
-        sql = self._SELECT + " WHERE id = ?"
         with obtener_conexion() as conn:
-            fila = conn.execute(sql, (id_departamento,)).fetchone()
+            fila = conn.execute(_SQL_OBTENER, (id_departamento,)).fetchone()
         return self._fila_a_departamento(fila) if fila else None
 
     def listar(self, nombre_contiene=None):
         """Devuelve los departamentos; si hay filtro, solo los que lo contienen."""
-        sql = self._SELECT
-        params = []
-        if nombre_contiene:
-            sql += " WHERE nombre LIKE ?"
-            params.append(f"%{nombre_contiene}%")
         with obtener_conexion() as conn:
-            filas = conn.execute(sql, params).fetchall()
+            if nombre_contiene:
+                filas = conn.execute(_SQL_LISTAR_FILTRO, (nombre_contiene,)).fetchall()
+            else:
+                filas = conn.execute(_SQL_LISTAR).fetchall()
         return [self._fila_a_departamento(f) for f in filas]
 
     def actualizar(self, departamento):

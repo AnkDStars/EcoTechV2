@@ -7,8 +7,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-class ErrorDeConexion(Exception):
-    """La base de datos no está disponible."""
+class ErrorDePersistencia(Exception):
+    """Base de todos los errores de la capa de datos."""
+
+
+class ErrorDeConexion(ErrorDePersistencia):
+    """No se pudo configurar, abrir o usar la base de datos."""
+
+
+class ErrorDeIntegridad(ErrorDePersistencia):
+    """Se violó una restricción: UNIQUE, FOREIGN KEY, NOT NULL."""
 
 
 @contextmanager
@@ -23,6 +31,10 @@ def obtener_conexion():
         conn.execute("PRAGMA foreign_keys = ON")   # SQLite las ignora si no se activan
         yield conn
         conn.commit()
+    except sqlite3.IntegrityError as e:   # primero: es subclase de sqlite3.Error
+        if conn:
+            conn.rollback()
+        raise ErrorDeIntegridad(f"No se pudo operar sobre la base: {e}") from e
     except sqlite3.Error as e:
         if conn:
             conn.rollback()

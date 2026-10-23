@@ -1,4 +1,4 @@
-from infraestructura.conexion import ErrorDeConexion, obtener_conexion
+from infraestructura.conexion import ErrorDePersistencia, obtener_conexion
 
 
 def insertar_persona(rut: str, nombre: str) -> None:
@@ -23,7 +23,7 @@ def main():
     try:
         insertar_persona("12345678-9", "Ana Rojas")
         print("Fila insertada.")
-    except ErrorDeConexion as e:
+    except ErrorDePersistencia as e:
         print(f"Aviso: {e}")
 
     for fila in listar_personas():
@@ -32,12 +32,12 @@ def main():
     # Prueba del RUT duplicado: debe avisar, no caerse.
     try:
         insertar_persona("12345678-9", "Ana Rojas")
-    except ErrorDeConexion as e:
+    except ErrorDePersistencia as e:
         print(f"Aviso (esperado): {e}")
 
 
 if __name__ == "__main__":
     try:
         main()
-    except ErrorDeConexion as e:
+    except ErrorDePersistencia as e:
         print(f"Error de configuración: {e}")
